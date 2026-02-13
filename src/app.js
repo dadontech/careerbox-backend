@@ -95,7 +95,7 @@ app.use((req, res, next) => {
 app.get('/', (req, res) => {
     res.status(200).json({
         success: true,
-        message: '🚀 CareerBox Backend API is running',
+        message: 'CareerBox Backend API is running',
         environment: process.env.NODE_ENV,
         endpoints: {
             auth: '/api/auth',
