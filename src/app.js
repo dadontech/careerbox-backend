@@ -6,11 +6,15 @@ const session = require('express-session');
 const passport = require('./config/passport');
 const authRoutes = require('./routes/authRoutes');
 const socialAuthRoutes = require('./routes/socialAuthRoutes');
-const { pool } = require('./config/database'); // 👈 import the database pool
+const { pool } = require('./config/database'); // import the database pool
 
 // Import cleanup job (for production)
 if (process.env.NODE_ENV === 'production') {
-    require('./src/jobs/verificationCleanup');
+    try {
+        require('./src/jobs/verificationCleanup');
+    } catch (err) {
+        console.error(' Failed to load cleanup job:', err.message);
+    }
 }
 
 const app = express();
@@ -19,18 +23,24 @@ const PORT = process.env.PORT || 5000;
 // ---------- Session Store for Production (PostgreSQL) ----------
 let sessionStore;
 if (process.env.NODE_ENV === 'production') {
-    const pgSession = require('connect-pg-simple')(session);
-    sessionStore = new pgSession({
-        pool: pool,                // Use the same pool as your app
-        tableName: 'session',      // Name of the session table (will be created automatically)
-        createTableIfMissing: true // Automatically create the table if it doesn't exist
-    });
-    console.log(' Using PostgreSQL session store');
+    try {
+        const pgSession = require('connect-pg-simple')(session);
+        sessionStore = new pgSession({
+            pool: pool,
+            tableName: 'session',
+            createTableIfMissing: true
+        });
+        console.log('✅ Using PostgreSQL session store');
+    } catch (err) {
+        console.error(' Failed to initialize PostgreSQL session store:', err.message);
+        console.log('⚠️ Falling back to memory store (sessions will not persist across restarts)');
+        // sessionStore remains undefined -> will use default memory store
+    }
 }
 
 // Session configuration
 app.use(session({
-    store: process.env.NODE_ENV === 'production' ? sessionStore : undefined, // use store only in production
+    store: process.env.NODE_ENV === 'production' ? sessionStore : undefined, // use store only in production if available
     secret: process.env.SESSION_SECRET || 'your_session_secret',
     resave: false,
     saveUninitialized: false,
@@ -66,16 +76,15 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.log(' Blocked by CORS:', origin);
+            console.log('🚫 Blocked by CORS:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
-    credentials: true // allow cookies
+    credentials: true
 }));
 
 // Handle preflight requests
@@ -89,6 +98,25 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - IP: ${req.ip}`);
     next();
+});
+
+// ---------- Test database route ----------
+app.get('/test-db', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT NOW() as time');
+        res.json({
+            success: true,
+            time: result.rows[0].time,
+            message: 'Database connection successful'
+        });
+    } catch (err) {
+        console.error(' Database test failed:', err.message);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            message: 'Database connection failed'
+        });
+    }
 });
 
 // Routes
@@ -120,7 +148,7 @@ app.use((err, req, res, next) => {
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`
-        Server started!
+        🚀 Server started!
         Port: ${PORT}
         Environment: ${process.env.NODE_ENV}
         Email Service: ${process.env.EMAIL_SERVICE || 'Not configured'}
@@ -132,6 +160,7 @@ if (require.main === module) {
         POST  /api/auth/verify/resend   - Resend verification
         GET   /api/auth/verify/status   - Check verification status
         GET   /health                   - Health check
+        GET   /test-db                   - Test database connection
         `);
     });
 }
