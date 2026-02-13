@@ -25,7 +25,7 @@ if (process.env.NODE_ENV === 'production') {
         tableName: 'session',      // Name of the session table (will be created automatically)
         createTableIfMissing: true // Automatically create the table if it doesn't exist
     });
-    console.log('✅ Using PostgreSQL session store');
+    console.log(' Using PostgreSQL session store');
 }
 
 // Session configuration
@@ -71,7 +71,7 @@ app.use(cors({
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.log('🚫 Blocked by CORS:', origin);
+            console.log(' Blocked by CORS:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -107,7 +107,7 @@ app.get('/health', (req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-    console.error('❌ Global error:', err);
+    console.error(' Global error:', err);
     res.status(err.status || 500).json({
         success: false,
         error: 'SERVER_ERROR',
@@ -120,7 +120,7 @@ app.use((err, req, res, next) => {
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`
-        🚀 Server started!
+        Server started!
         Port: ${PORT}
         Environment: ${process.env.NODE_ENV}
         Email Service: ${process.env.EMAIL_SERVICE || 'Not configured'}
