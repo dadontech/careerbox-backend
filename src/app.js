@@ -91,11 +91,25 @@ app.use((req, res, next) => {
     next();
 });
 
-// Routes
+// ---------- Root Route ----------
+app.get('/', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: '🚀 CareerBox Backend API is running',
+        environment: process.env.NODE_ENV,
+        endpoints: {
+            auth: '/api/auth',
+            health: '/health'
+        },
+        timestamp: new Date().toISOString()
+    });
+});
+
+// ---------- API Routes ----------
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', socialAuthRoutes);
 
-// Health check endpoint
+// ---------- Health Check Endpoint ----------
 app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
@@ -105,7 +119,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Global error handler
+// ---------- Global Error Handler ----------
 app.use((err, req, res, next) => {
     console.error(' Global error:', err);
     res.status(err.status || 500).json({
@@ -116,7 +130,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ---------- Start server only if run directly (not imported by Vercel) ----------
+// ---------- Start Server Only if Run Directly (Not Imported by Vercel) ----------
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`
@@ -132,6 +146,7 @@ if (require.main === module) {
         POST  /api/auth/verify/resend   - Resend verification
         GET   /api/auth/verify/status   - Check verification status
         GET   /health                   - Health check
+        GET   /                           - Root API info
         `);
     });
 }
