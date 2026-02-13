@@ -10,7 +10,7 @@ const { pool } = require('./config/database'); //
 
 // Import cleanup job (for production)
 if (process.env.NODE_ENV === 'production') {
-    require('./src/jobs/verificationCleanup');
+    require('./jobs/verificationCleanup');
 }
 
 const app = express();
