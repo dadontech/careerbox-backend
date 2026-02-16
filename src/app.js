@@ -14,6 +14,12 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const app = express();
+
+// express-rate-limit proxy issue
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
+
 const PORT = process.env.PORT || 5000;
 
 // ---------- Session Store for Production (PostgreSQL) ----------
