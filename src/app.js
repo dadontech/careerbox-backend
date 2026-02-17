@@ -67,7 +67,6 @@ app.use(helmet());
 const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:3000',
     'http://localhost:3000',
-    'https://careerbox-donee.vercel.app'
 ];
 
 app.use(cors({
@@ -100,7 +99,7 @@ app.get('/', (req, res) => {
         environment: process.env.NODE_ENV,
         endpoints: {
             auth: '/api/auth',
-            user: '/api/user', //  ADDED
+            user: '/api/user', 
             health: '/health'
         },
         timestamp: new Date().toISOString()
@@ -110,7 +109,7 @@ app.get('/', (req, res) => {
 // ---------- API Routes ----------
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', socialAuthRoutes);
-app.use('/api/user', userRoutes); //  REGISTERED
+app.use('/api/user', userRoutes); 
 
 // ---------- Health Check ----------
 app.get('/health', (req, res) => {
