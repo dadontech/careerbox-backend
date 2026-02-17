@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { query } = require('../config/database');
 
+
 class User {
     // ============ CREATE METHODS ============
     static async create(email, password, firstName = '', lastName = '') {

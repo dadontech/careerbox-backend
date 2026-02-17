@@ -6,6 +6,7 @@ const session = require('express-session');
 const passport = require('./config/passport');
 const authRoutes = require('./routes/authRoutes');
 const socialAuthRoutes = require('./routes/socialAuthRoutes');
+const userRoutes = require('./routes/user'); // 
 const { pool } = require('./config/database');
 
 // Import cleanup job (for production)
@@ -98,6 +99,7 @@ app.get('/', (req, res) => {
         environment: process.env.NODE_ENV,
         endpoints: {
             auth: '/api/auth',
+            user: '/api/user', //  ADDED
             health: '/health'
         },
         timestamp: new Date().toISOString()
@@ -107,6 +109,7 @@ app.get('/', (req, res) => {
 // ---------- API Routes ----------
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', socialAuthRoutes);
+app.use('/api/user', userRoutes); //  REGISTERED
 
 // ---------- Health Check ----------
 app.get('/health', (req, res) => {
@@ -118,7 +121,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ---------- Optional GET Test Routes (For Browser Testing) ----------
+// ---------- Optional GET Test Routes ----------
 app.get('/test/signup', (req, res) => {
     res.send(`<h2>POST /api/auth/signup</h2>
               <p>Use Postman or curl to test this route.</p>`);
@@ -150,13 +153,12 @@ Environment: ${process.env.NODE_ENV}
 Email Service: ${process.env.EMAIL_SERVICE || 'Not configured'}
 
 API Endpoints:
-POST  /api/auth/signup          - User registration
-POST  /api/auth/login           - User login
-POST  /api/auth/verify/verify   - Verify email
-POST  /api/auth/verify/resend   - Resend verification
-GET   /api/auth/verify/status   - Check verification status
-GET   /health                   - Health check
-GET   /                           - Root API info
+POST  /api/auth/signup
+POST  /api/auth/login
+GET   /api/user/me
+PUT   /api/user/update-profession
+GET   /health
+GET   /
         `);
     });
 }

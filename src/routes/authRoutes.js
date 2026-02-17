@@ -1,14 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
+const passport = require('passport');
+const jwt = require('jsonwebtoken');
+
 const authController = require('../controllers/authController');
 const verificationRoutes = require('./verificationRoutes');
-const passport = require('passport');
+const passwordResetController = require('../controllers/passwordResetController');
 
-// Rate limiting for auth routes
+// ============================================
+// RATE LIMITING
+// ============================================
+
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per window
+    max: 100,
     message: {
         success: false,
         error: 'RATE_LIMITED',
@@ -16,53 +22,73 @@ const authLimiter = rateLimit({
     }
 });
 
-// Mount verification routes
+// ============================================
+// MOUNT VERIFICATION ROUTES
+// ============================================
+
 router.use('/verify', verificationRoutes);
 
-// Auth routes
+// ============================================
+// BASIC AUTH ROUTES
+// ============================================
+
 router.post('/signup', authLimiter, authController.signup);
 router.post('/login', authLimiter, authController.login);
 
-// ============ SOCIAL LOGIN ROUTES ============
-// ... (your existing Google and LinkedIn routes – unchanged) ...
+// ============================================
+// SOCIAL LOGIN ROUTES (JWT VERSION)
+// ============================================
 
-// ---------- Google OAuth ----------
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+// ---------- GOOGLE LOGIN ----------
 router.get('/google', (req, res, next) => {
-    if (req.query.state) {
-        req.session.oauthRedirect = req.query.state;
-    }
     passport.authenticate('google', {
         scope: ['profile', 'email']
     })(req, res, next);
 });
 
 router.get('/google/callback', (req, res, next) => {
-    passport.authenticate('google', (err, user, info) => {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const redirectTo = req.session.oauthRedirect || '/dashboard';
-        delete req.session.oauthRedirect;
+    passport.authenticate('google', async (err, user) => {
 
         if (err) {
             console.error('Google auth error:', err);
-            return res.redirect(`${frontendUrl}/login?error=auth_failed`);
-        }
-        if (!user) {
-            return res.redirect(`${frontendUrl}/login?error=user_not_found`);
+            return res.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
         }
 
-        req.logIn(user, (err) => {
-            if (err) return next(err);
-            const message = encodeURIComponent(user.authMessage || 'Successfully logged in with Google!');
-            return res.redirect(`${frontendUrl}/auth/callback?redirect=${encodeURIComponent(redirectTo)}&auth=success&message=${message}`);
-        });
+        if (!user) {
+            return res.redirect(`${FRONTEND_URL}/login?error=user_not_found`);
+        }
+
+        try {
+            // 🔐 Generate JWT
+            const token = jwt.sign(
+                {
+                    id: user.id,
+                    email: user.email
+                },
+                process.env.JWT_SECRET,
+                { expiresIn: '7d' }
+            );
+
+            const message = encodeURIComponent(
+                user.authMessage || 'Successfully logged in with Google!'
+            );
+
+            return res.redirect(
+                `${FRONTEND_URL}/auth/callback?token=${token}&auth=success&message=${message}`
+            );
+
+        } catch (error) {
+            console.error('JWT generation error:', error);
+            return res.redirect(`${FRONTEND_URL}/login?error=server_error`);
+        }
+
     })(req, res, next);
 });
 
-// ---------- LinkedIn OAuth ----------
+// ---------- LINKEDIN LOGIN ----------
 router.get('/linkedin', (req, res, next) => {
-    if (req.query.state) {
-        req.session.oauthRedirect = req.query.state;
-    }
     passport.authenticate('linkedin', {
         scope: ['openid', 'profile', 'email'],
         state: true
@@ -70,60 +96,72 @@ router.get('/linkedin', (req, res, next) => {
 });
 
 router.get('/linkedin/callback', (req, res, next) => {
-    passport.authenticate('linkedin', (err, user, info) => {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const redirectTo = req.session.oauthRedirect || '/dashboard';
-        delete req.session.oauthRedirect;
+    passport.authenticate('linkedin', async (err, user) => {
 
         if (err) {
             console.error('LinkedIn auth error:', err);
-            return res.redirect(`${frontendUrl}/login?error=auth_failed`);
-        }
-        if (!user) {
-            return res.redirect(`${frontendUrl}/login?error=user_not_found`);
+            return res.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
         }
 
-        req.logIn(user, (err) => {
-            if (err) return next(err);
-            const message = encodeURIComponent(user.authMessage || 'Successfully logged in with LinkedIn!');
-            return res.redirect(`${frontendUrl}/auth/callback?redirect=${encodeURIComponent(redirectTo)}&auth=success&message=${message}`);
-        });
+        if (!user) {
+            return res.redirect(`${FRONTEND_URL}/login?error=user_not_found`);
+        }
+
+        try {
+            // 🔐 Generate JWT
+            const token = jwt.sign(
+                {
+                    id: user.id,
+                    email: user.email
+                },
+                process.env.JWT_SECRET,
+                { expiresIn: '7d' }
+            );
+
+            const message = encodeURIComponent(
+                user.authMessage || 'Successfully logged in with LinkedIn!'
+            );
+
+            return res.redirect(
+                `${FRONTEND_URL}/auth/callback?token=${token}&auth=success&message=${message}`
+            );
+
+        } catch (error) {
+            console.error('JWT generation error:', error);
+            return res.redirect(`${FRONTEND_URL}/login?error=server_error`);
+        }
+
     })(req, res, next);
 });
 
-// ============ PASSWORD RESET ============
-const passwordResetController = require('../controllers/passwordResetController');
+// ============================================
+// PASSWORD RESET
+// ============================================
 
-// Request password reset (send 4-digit code)
 router.post('/forgot-password', authLimiter, passwordResetController.forgotPassword);
-
-// Verify reset code
 router.post('/verify-reset-code', authLimiter, passwordResetController.verifyResetCode);
-
-// Reset password (with verified code)
 router.post('/reset-password', authLimiter, passwordResetController.resetPassword);
 
-// =============================================
+// ============================================
+// PROTECTED PROFILE ROUTE (JWT REQUIRED)
+// ============================================
 
-// Protected routes requiring email verification
 router.get('/profile', authController.requireVerification, (req, res) => {
-    res.json({ user: req.user });
+    res.json({
+        success: true,
+        user: req.user
+    });
 });
 
-// Logout route
+// ============================================
+// LOGOUT (JWT VERSION)
+// ============================================
+
 router.post('/logout', (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            return res.status(500).json({
-                success: false,
-                message: 'Logout failed'
-            });
-        }
-        res.clearCookie('connect.sid');
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
+    // JWT logout = frontend deletes token
+    res.json({
+        success: true,
+        message: 'Logout successful. Please remove token on client side.'
     });
 });
 
