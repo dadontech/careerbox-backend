@@ -61,7 +61,7 @@ router.get('/google/callback', (req, res, next) => {
         }
 
         try {
-            // 🔐 Generate JWT
+            //  Generate JWT
             const token = jwt.sign(
                 {
                     id: user.id,
