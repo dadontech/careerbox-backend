@@ -66,7 +66,8 @@ app.use(helmet());
 // ---------- CORS ----------
 const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'https://careerbox-donee.vercel.app'
 ];
 
 app.use(cors({
