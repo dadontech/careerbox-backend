@@ -82,8 +82,8 @@ app.use(cors({
 app.options('*', cors());
 
 // ---------- Body Parser ----------
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ---------- Request Logging ----------
 app.use((req, res, next) => {

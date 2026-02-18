@@ -1,7 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { query } = require('../config/database');
 
-
 class User {
     // ============ CREATE METHODS ============
     static async create(email, password, firstName = '', lastName = '') {
@@ -178,6 +177,76 @@ class User {
             return result.rows[0];
         } catch (error) {
             console.error('Update provider error:', error);
+            throw error;
+        }
+    }
+
+    // ============ NEW METHODS FOR PROFESSION AND PERSONAL INFO ============
+    /**
+     * Update user's profession and experience (used by /update-profession)
+     */
+    static async updateProfession(userId, profession, experience) {
+        try {
+            const result = await query(
+                `UPDATE users 
+                 SET profession = $1, experience = $2
+                 WHERE id = $3
+                 RETURNING id, email, first_name, last_name, profession, experience`,
+                [profession, experience, userId]
+            );
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error('Update profession error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update user's personal information (profile picture, location, links, custom links)
+     */
+    static async updatePersonalInfo(userId, data) {
+        const {
+            profilePicture,
+            location,
+            linkedinUrl,
+            linkedinLabel,
+            instagramUrl,
+            instagramLabel,
+            otherUrl,
+            otherLabel,
+            customLinks
+        } = data;
+
+        try {
+            const result = await query(
+                `UPDATE users 
+                 SET profile_picture = $1,
+                     location = $2,
+                     linkedin_url = $3,
+                     linkedin_label = $4,
+                     instagram_url = $5,
+                     instagram_label = $6,
+                     other_url = $7,
+                     other_label = $8,
+                     custom_links = $9
+                 WHERE id = $10
+                 RETURNING *`,
+                [
+                    profilePicture || null,
+                    location || null,
+                    linkedinUrl || null,
+                    linkedinLabel || null,
+                    instagramUrl || null,
+                    instagramLabel || null,
+                    otherUrl || null,
+                    otherLabel || null,
+                    JSON.stringify(customLinks || []), // convert to JSON string for PostgreSQL JSONB
+                    userId
+                ]
+            );
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error('Update personal info error:', error);
             throw error;
         }
     }
