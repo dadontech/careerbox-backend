@@ -107,6 +107,7 @@ The ${process.env.EMAIL_FROM_NAME || 'Your App'} Team
         }
     }
 
+
     generatePasswordResetEmailHTML(name, code) {
         const expiryMinutes = process.env.VERIFICATION_CODE_EXPIRY_MINUTES || 10;
         return `

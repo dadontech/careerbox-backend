@@ -16,10 +16,10 @@ router.get("/me", verifyToken, async (req, res) => {
               linkedin_url, linkedin_label,
               instagram_url, instagram_label,
               other_url, other_label,
-              custom_links
+              custom_links, experiences
        FROM users
        WHERE id = $1`,
-      [userId]
+      [userId],
     );
 
     if (result.rows.length === 0) {
@@ -29,28 +29,27 @@ router.get("/me", verifyToken, async (req, res) => {
       });
     }
 
-const user = result.rows[0];
+    const user = result.rows[0];
 
-return res.json({
-  success: true,
-  user: {
-    id: user.id,
-    email: user.email,
-    profession: user.profession,
-    experience: user.experience,
-    profilePicture: user.profile_picture,
-    location: user.location,
-    linkedinUrl: user.linkedin_url,
-    linkedinLabel: user.linkedin_label,
-    instagramUrl: user.instagram_url,
-    instagramLabel: user.instagram_label,
-    otherUrl: user.other_url,
-    otherLabel: user.other_label,
-    customLinks: user.custom_links,
-  },
-});
-
-
+    return res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        profession: user.profession,
+        experience: user.experience,
+        profilePicture: user.profile_picture,
+        location: user.location,
+        linkedinUrl: user.linkedin_url,
+        linkedinLabel: user.linkedin_label,
+        instagramUrl: user.instagram_url,
+        instagramLabel: user.instagram_label,
+        otherUrl: user.other_url,
+        otherLabel: user.other_label,
+        customLinks: user.custom_links,
+        experiences: user.experiences,
+      },
+    });
   } catch (error) {
     console.error("GET /me error:", error.message);
     return res.status(500).json({
@@ -92,7 +91,7 @@ router.put("/update-profession", verifyToken, async (req, res) => {
            experience = $2
        WHERE id = $3
        RETURNING id, email, profession, experience`,
-      [profession, experience, userId]
+      [profession, experience, userId],
     );
 
     if (result.rows.length === 0) {
@@ -107,9 +106,54 @@ router.put("/update-profession", verifyToken, async (req, res) => {
       message: "Profile updated successfully",
       user: result.rows[0],
     });
-
   } catch (error) {
     console.error("UPDATE PROFESSION error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
+
+
+// ==================================================
+// UPDATE EXPERIENCES
+// ==================================================
+router.put("/experiences", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { experiences } = req.body;
+
+    // Basic validation – you can require at least one experience if you want
+    if (!Array.isArray(experiences)) {
+      return res.status(400).json({
+        success: false,
+        message: "Experiences must be an array",
+      });
+    }
+
+    const result = await query(
+      `UPDATE users
+       SET experiences = $1
+       WHERE id = $2
+       RETURNING id, email, experiences`,
+      [JSON.stringify(experiences), userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Experiences updated successfully",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error("UPDATE EXPERIENCES error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -144,7 +188,9 @@ router.put("/personal-info", verifyToken, async (req, res) => {
     }
 
     // Prepare customLinks as JSONB (stringify if it's an array)
-    const customLinksJson = Array.isArray(customLinks) ? JSON.stringify(customLinks) : '[]';
+    const customLinksJson = Array.isArray(customLinks)
+      ? JSON.stringify(customLinks)
+      : "[]";
 
     const result = await query(
       `UPDATE users
@@ -170,7 +216,7 @@ router.put("/personal-info", verifyToken, async (req, res) => {
         otherLabel || null,
         customLinksJson,
         userId,
-      ]
+      ],
     );
 
     if (result.rows.length === 0) {
@@ -185,7 +231,6 @@ router.put("/personal-info", verifyToken, async (req, res) => {
       message: "Personal information updated successfully",
       user: result.rows[0],
     });
-
   } catch (error) {
     // Log the full error object to see the stack trace
     console.error("UPDATE PERSONAL INFO error:", error);

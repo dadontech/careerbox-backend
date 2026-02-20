@@ -251,6 +251,24 @@ class User {
         }
     }
 
+
+    // ============ UPDATE EXPERIENCES ============
+static async updateExperiences(userId, experiences) {
+  try {
+    const result = await query(
+      `UPDATE users 
+       SET experiences = $1
+       WHERE id = $2
+       RETURNING *`,
+      [JSON.stringify(experiences || []), userId]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Update experiences error:', error);
+    throw error;
+  }
+}
+
     // ============ SOCIAL LOGIN ============
     static async findOrCreateSocialUser(provider, providerData, email, firstName = '', lastName = '', avatarUrl = '') {
         try {
